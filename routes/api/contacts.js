@@ -1,5 +1,6 @@
 const express = require('express')
 const { listContacts, getContactById, addContact, removeContact, updateContact } = require('../../models/contacts')
+const { requiredSchema, partialSchema} = require('../../utils')
 
 const router = express.Router()
 
@@ -29,20 +30,18 @@ router.get('/:contactId', async (req, res) => {
 })
 
 router.post('/', async (req, res) => {
-  const { name, email, phone } = req.body;
+  if (!req.body) {
+    res.status(400).json({message: 'Required fields are missing'});
+  }
 
-  if(!name) {
-    return res.status(400).json({ message: "missing required name field" });
-  }
-  if(!email) {
-    return res.status(400).json({ message: "missing required email field" });
-  }
-  if(!phone) {
-    return res.status(400).json({ message: "missing required phone field" });
+  const { error } = requiredSchema.validate(req.body);
+
+  if (error?.message) {
+    return res.status(400).json({message: error.message});
   }
 
   try {
-    const contact = await addContact({ name, email, phone });
+    const contact = await addContact(req.body);
 
     res.status(201).json({contact});
   } catch (err) {
@@ -69,7 +68,13 @@ router.delete('/:contactId', async (req, res) => {
 
 router.put('/:contactId', async (req, res) => {
   if (!req.body) {
-    return res.status(400).json({message: "missing fields"})
+    res.status(400).json({message: 'Required fields are missing'});
+  }
+
+  const { error } = partialSchema.validate(req.body);
+
+  if (error?.message) {
+    return res.status(400).json({message: error.message});
   }
 
   try {
